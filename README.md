@@ -22,7 +22,9 @@ Todo tópico segue o mesmo ciclo:
 
 - [x] **Fase 0 — Fundamentos do terminal**: TTY, PTY, Shell, Processo, Sessão,
       Controle de terminal. Ver [`docs/fase-0-fundamentos.md`](docs/fase-0-fundamentos.md).
-- [ ] Fase 1 — Emulação e multiplexação (WezTerm, tmux)
+- [x] **Fase 1 — Emulação e multiplexação**: WezTerm (canal nightly),
+      estrutura de config em Lua, tmux, domínios WezTerm vs tmux.
+      Ver [`docs/fase-1-wezterm.md`](docs/fase-1-wezterm.md).
 - [ ] Fase 2 — Editor como ambiente (Neovim, Lua, LSP, DAP, Treesitter)
 - [ ] Fase 3 — Ferramentas Unix e produtividade
 - [ ] Fase 4 — Diagnóstico e baixo nível (strace, gdb, valgrind, perf)

@@ -141,3 +141,31 @@ servidor tmux, que roda independente de qualquer PTY externo.
 tmux kill-session -t teste
 tmux ls   # "no server running" confirma encerramento sem processos órfãos
 ```
+
+## WezTerm vs tmux — domínios de aplicação
+
+WezTerm tem multiplexador próprio (`wezterm-mux-server`), mas é um recurso
+**do binário WezTerm**, só existe onde o WezTerm está instalado. tmux é
+independente de qualquer emulador gráfico específico, e está quase
+universalmente disponível em servidores Linux remotos.
+
+**Regra prática:** panes/tabs nativos do WezTerm para organização **local**
+no próprio desktop. tmux especificamente ao conectar em máquinas remotas via
+SSH, onde a persistência de sessão contra queda de conexão importa de fato
+— o processo remoto sobrevive porque o servidor tmux roda do lado de lá,
+indiferente à conexão do cliente.
+
+---
+
+## Fase 1 — fechada
+
+1. Emuladores de terminal: papel puramente userspace, tradução PTY <-> pixels,
+   herança de compatibilidade `xterm-256color`
+2. WezTerm escolhido sobre Ptyxis (Lua compartilhado com Neovim futuro,
+   maturidade em Linux); canal nightly em vez de stable (congelada desde 2024)
+3. Estrutura de config (`~/.wezterm.lua`) como programa Lua executado, não
+   dados declarativos -- `return config` é o mecanismo real
+4. tmux: arquitetura cliente-servidor, sobrevivência de sessão comprovada
+   empiricamente até com troca completa de terminal
+5. WezTerm mux (local) vs tmux (remoto/SSH) -- domínios complementares, não
+   concorrentes
