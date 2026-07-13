@@ -3,7 +3,7 @@
 Construção, do zero e com entendimento profundo de cada camada, de um ambiente
 de desenvolvimento terminal-first para engenharia de software.
 
-Este repositório não documenta apenas *configurações* — documenta o **motivo**
+Este repositório não documenta apenas _configurações_ — documenta o **motivo**
 de cada ferramenta existir, o **problema** que ela resolve, e a **verificação
 empírica** de que o entendimento está correto antes de qualquer config entrar
 em produção no ambiente real (versionado separadamente via chezmoi).
