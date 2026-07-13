@@ -86,3 +86,58 @@ efeito visual (janela translúcida) antes de remover o valor de teste.
 não bloqueante de `mux::ssh_agent` ao tentar espelhar o `SSH_AUTH_SOCK` do
 agente persistente configurado no `.zshrc`. Investigar na Fase 5
 (Integração profissional / SSH).
+
+## tmux — persistência de sessão
+
+Sessões de terminal (Fase 0) estão amarradas ao PTY que as criou: fechar o
+terminal mata o PTY, e todo processo daquela sessão recebe SIGHUP e morre
+junto. tmux resolve isso com uma arquitetura **cliente-servidor**: um
+processo servidor independente, dono real dos shells/processos, e um
+cliente (o que aparece na tela) que só se conecta/desconecta desse servidor.
+
+```sh
+sudo apt install tmux   # não requer PPA externo, pacote estável do Ubuntu
+tmux -V                 # 3.6
+```
+
+### Modelo mental
+
+```
+[WezTerm] --PTY--> [zsh] --> [tmux client] ~~socket unix~~> [tmux server]
+                                                                   │
+                                                                   └── [zsh interno] --> [processo]
+
+fechar a janela → sessão do WezTerm morre → tmux server continua,
+processo interno sobrevive, dono de um PTY próprio gerenciado pelo tmux
+```
+
+### Comandos usados
+
+- `tmux new -s <nome>` — cria sessão nomeada (inicia o servidor se não existir)
+- `Ctrl+b` — prefix key: sinaliza ao tmux que a próxima tecla é um comando
+  seu, não texto normal
+- `Ctrl+b` `d` — detach: sai do cliente sem matar a sessão
+- `tmux ls` — lista sessões vivas no servidor
+- `tmux attach -t <nome>` — reconecta um cliente novo a uma sessão existente
+- `tmux kill-session -t <nome>` — encerra sessão (e o processo interno)
+
+### Verificação empírica (progressiva)
+
+1. `tmux new -s teste` + `sleep 300` rodando em foreground
+2. Detach (`Ctrl+b d`) → `tmux ls` mostra sessão viva, `ps aux` mostra
+   `sleep 300` com TTY próprio do tmux (`pts/0`), independente do TTY do
+   terminal externo
+3. **Teste decisivo:** fechar a janela inteira do terminal original (não
+   apenas detach) → abrir um terminal novo, inclusive um emulador
+   diferente → `tmux attach -t teste` → `sleep 300` reaparece intacto,
+   contando de onde parou
+
+Isso confirma: o processo nunca dependeu do terminal que o criou, apenas do
+servidor tmux, que roda independente de qualquer PTY externo.
+
+### Limpeza
+
+```sh
+tmux kill-session -t teste
+tmux ls   # "no server running" confirma encerramento sem processos órfãos
+```
