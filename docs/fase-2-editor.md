@@ -207,3 +207,95 @@ Ativação confirmada via efeito visual causal: UI de instalação do Lazy.nvim
 aparece, e o esquema de cores muda de fato (preto/branco padrão -> tons de
 azul do tokyonight) -- mesma disciplina de prova causal usada na Fase 1
 com `window_background_opacity`.
+
+## Treesitter — parsing real em vez de regex
+
+Highlight tradicional usa regex: reconhece padrões de texto locais, sem
+noção de estrutura (quebra em strings multi-linha aninhadas, código dentro
+de código). Treesitter constrói uma árvore sintática real (parse tree) --
+mesma estrutura que compiladores usam -- permitindo ao Neovim entender
+"isso é uma função", "isso é uma string dentro do corpo", não só padrões de
+aparência. Essa árvore é reusada depois por LSP, navegação e refatoração.
+
+### Correção 1: API `main` vs `master`
+
+A branch `main` do `nvim-treesitter` é reescrita completa e incompatível: o
+plugin só instala parsers agora, não ativa highlight -- isso virou
+responsabilidade do próprio Neovim core (`vim.treesitter.start()`).
+
+```lua
+{
+  "nvim-treesitter/nvim-treesitter",
+  branch = "main",
+  build = ":TSUpdate",
+  config = function()
+    local ts = require("nvim-treesitter")
+    ts.install({ "lua" }):wait(300000)
+
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = { "lua" },
+      callback = function()
+        pcall(vim.treesitter.start)
+      end,
+    })
+  end,
+},
+```
+
+- `require("nvim-treesitter").install({...})` -- não mais
+  `require("nvim-treesitter.configs").setup({...})`
+- `install()` retorna um objeto `Task` **assíncrono** -- `:wait(timeout)`
+  (método, sintaxe `:`) força espera síncrona, necessário em contexto de
+  bootstrap
+- `vim.api.nvim_create_autocmd("FileType", {...})` -- autocomando nativo do
+  Neovim: registra "quando este evento acontecer, rode esta função"
+- `pcall(vim.treesitter.start)` -- protected call, evita que uma falha
+  (parser ainda não pronto) trave o Neovim inteiro
+
+### Correção 2: Neovim 0.11.6 insuficiente
+
+`branch = "main"` exige Neovim **0.12+**. A versão 0.11.6 (Ubuntu 26.04,
+considerada "suficiente" na decisão original) não atende esse plugin
+específico -- mesmo padrão de canal desatualizado visto no WezTerm.
+
+**Decisão:** trocar o pacote APT pelo tarball oficial pré-compilado do
+GitHub Releases (não PPA -- não mantido pela equipe do projeto, historicamente
+anos desatualizado; não build from source -- sem necessidade).
+
+```sh
+sudo apt remove neovim
+curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
+sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+```
+
+**Verificação:** `nvim --version` → `NVIM v0.12.4`
+
+### Correção 3: `tree-sitter-cli` ausente
+
+Dependência separada do motor genérico Tree-sitter (não é o parser de
+linguagem em si), usada internamente para compilação. Distribuída via npm.
+
+```sh
+npm install -g tree-sitter-cli
+```
+
+**Diagnóstico usado:** `:checkhealth nvim-treesitter` -- ferramenta correta
+para expor exatamente qual requisito está faltando, em vez de inferir
+causas por tentativa e erro.
+
+### Localização dos parsers na nova arquitetura
+
+Diferente da API antiga (parsers dentro da própria pasta do plugin), a
+branch `main` instala em um diretório separado, próprio do Neovim:
+
+```sh
+ls ~/.local/share/nvim/site/parser/   # lua.so
+```
+
+### Verificação final
+
+Após as três correções: `nvim <arquivo.lua>` abre sem erro, highlight
+aparece com cores diferenciadas para strings/palavras-chave, e o parser
+compilado (`lua.so`) existe fisicamente no diretório correto -- prova dupla
+(efeito visual + arquivo em disco), mesma disciplina usada desde a Fase 1.
