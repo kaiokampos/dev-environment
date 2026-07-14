@@ -105,3 +105,44 @@ Lua fecha blocos com `end`, não chaves `{}`.
 Todas as três testadas via `:lua <expressão>` dentro do próprio Neovim,
 sem precisar de arquivo: `print(nome)` → `kaio`; `config.largura` → `80`,
 `config["altura"]` → `24`; `saudacao("kaio")` → `olá, kaio`.
+
+## Estrutura de configuração (`init.lua` e XDG)
+
+Neovim segue a XDG Base Directory Specification: config mora em
+`~/.config/nvim/init.lua`, não solto na raiz do `$HOME` (padrão de
+convivência entre ferramentas Linux, evita bagunça de dotfiles soltos).
+
+```lua
+vim.opt.number = true
+```
+
+`vim` é uma tabela global exposta automaticamente pelo Neovim (diferente do
+`wezterm`, que precisa de `require`). `vim.opt` representa as opções do
+editor.
+
+**Verificação causal:** `vim.opt.number = true` liga numeração de linha --
+efeito visual impossível de confundir com coincidência, mesmo princípio do
+teste de opacidade do WezTerm na Fase 1.
+
+### Modularização via `require`
+
+```lua
+-- init.lua
+require("config.opcoes")
+```
+
+```lua
+-- lua/config/opcoes.lua
+vim.opt.number = true
+```
+
+Dentro de `require()`, o `.` representa caminho de pasta (não acesso de
+tabela) -- `require("config.opcoes")` resolve para
+`~/.config/nvim/lua/config/opcoes.lua`. A pasta `lua/` é raiz de busca
+implícita, não entra no caminho escrito.
+
+**Verificação:** após mover o conteúdo para `lua/config/opcoes.lua` e deixar
+`init.lua` só com o `require`, o comportamento visual (números de linha)
+permaneceu idêntico -- confirma que a modularização não quebra o
+carregamento, só reorganiza onde o código mora. Essa estrutura é a base
+esperada pelo Lazy.nvim (próximo tópico).
