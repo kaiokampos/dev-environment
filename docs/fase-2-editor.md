@@ -146,3 +146,64 @@ implícita, não entra no caminho escrito.
 permaneceu idêntico -- confirma que a modularização não quebra o
 carregamento, só reorganiza onde o código mora. Essa estrutura é a base
 esperada pelo Lazy.nvim (próximo tópico).
+
+## Lazy.nvim — gerenciador de plugins
+
+Instalar plugins manualmente (clonar em `~/.config/nvim/pack/...`) tem dois
+problemas em escala: **startup lento** (todos os plugins carregam sempre,
+mesmo os raramente usados) e **falta de reprodutibilidade** (sem lockfile
+de versões, reinstalar do zero pode pegar versões diferentes). Lazy.nvim
+resolve os dois: lazy loading (carregar plugin sob demanda -- por tipo de
+arquivo, por comando) e `lazy-lock.json` (equivalente a `package-lock.json`
+do npm).
+
+### Bootstrap
+
+```lua
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
+    "git", "clone", "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    "--branch=stable", lazypath,
+  })
+end
+
+vim.opt.rtp:prepend(lazypath)
+```
+
+- `vim.fn.stdpath("data")` -- caminho de dados do Neovim (`~/.local/share/nvim`,
+  XDG data dir -- diferente de `~/.config`, que é só config)
+- `vim.loop.fs_stat(caminho)` -- verifica existência no disco; `not` inverte
+  para "só clona se ainda não existir"
+- `vim.fn.system({...})` -- executa comando de sistema (tabela = lista de
+  argumentos do `git clone`)
+- `vim.opt.rtp:prepend(...)` -- adiciona ao runtime path (onde o Neovim
+  procura plugins/scripts), no início da lista
+
+### Ativação e primeiro plugin
+
+```lua
+require("lazy").setup({
+  {
+    "folke/tokyonight.nvim",
+    priority = 1000,
+    config = function()
+      vim.cmd.colorscheme("tokyonight")
+    end,
+  },
+})
+```
+
+Cada plugin é uma tabela: posição 1 (sem chave) = `usuario/repositorio` do
+GitHub; `priority` controla ordem de carregamento (temas precisam carregar
+cedo, evita flash de cor padrão); `config = function() ... end` roda depois
+da instalação.
+
+**Verificação empírica:** bootstrap confirmado via `ls` no diretório de
+destino do clone (arquivos reais do Lazy.nvim presentes, não assumido).
+Ativação confirmada via efeito visual causal: UI de instalação do Lazy.nvim
+aparece, e o esquema de cores muda de fato (preto/branco padrão -> tons de
+azul do tokyonight) -- mesma disciplina de prova causal usada na Fase 1
+com `window_background_opacity`.
